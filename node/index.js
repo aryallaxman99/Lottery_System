@@ -32,7 +32,7 @@ const winnerSchema = new Schema({
   },
 });
 
-const winner = mongoose.model("winner", winnerSchema);
+const Winner = mongoose.model("winner", winnerSchema);
 
 const connect = async () => {
   try {
@@ -54,18 +54,33 @@ app.get("/ticket", async (req, res, next) => {
   next();
 });
 
-app.get("/users", async (req, res, next) => {
-  const userList = await Users.findOne({ name: req.query.name });
-  if (userList) {
-    res.json({
-      msg: "Valid User",
+app.get("/users", async (req, res) => {
+  if (req.query.name) {
+    const usersList = await Users.findOne({ name: req.query.name });
+    const searchWinColor = await Winner.findOne({
+      ticketNo: req.query.ticketNo,
     });
+    if (searchWinColor?.color === req.query.color && usersList) {
+      res.json({
+        msg: "hurray! you win",
+      });
+    } else {
+      if (!usersList) {
+        res.json({
+          errMsg: "not registered",
+        });
+      } else {
+        res.json({
+          errMsg: "you have lost",
+        });
+      }
+    }
   } else {
+    const usersList = await Users.find();
     res.json({
-      errormsg: "Invalid User",
+      usersList: usersList,
     });
   }
-  next();
 });
 
 app.post("/register", async (req, res, next) => {
@@ -102,8 +117,7 @@ app.post("/winner", async (req, res, next) => {
       color: req.body.color,
       ticket: req.body.ticket,
     };
-    console.log(data);
-    const response = await winner.create(data);
+    const response = await Winner.create(data);
     if (response) {
       res.json({
         msg: `winner ticket number ${req.body.ticket} and color is ${req.body.color}`,
